@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { problemsAPI } from '../services/api';
+import { debounce } from 'lodash';
 
 interface Problem {
   id: number;
@@ -194,6 +195,21 @@ const Practice: React.FC = () => {
     searchWithCurrentTerm();
   }, [difficulty, selectedTopics, searchTerm]);
 
+  // Wrap handleSearch in debounce
+  const debouncedSearch = useCallback(
+    debounce(() => {
+      handleSearch();
+    }, 500), // wait 500ms after user stops typing
+    [difficulty, selectedTopics, searchTerm] // re-create when these change
+  );
+
+  // Run debounced search whenever searchTerm changes
+  useEffect(() => {
+    if (searchTerm.trim() !== '') {
+      debouncedSearch();
+    }
+    return debouncedSearch.cancel; // cleanup debounce on unmount/re-render
+  }, [searchTerm, debouncedSearch]);
 
   if (loading && problems.length === 0) {
     return (
@@ -242,7 +258,7 @@ const Practice: React.FC = () => {
                   placeholder="Search practice problems..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  // onKeyPress={(e) => e.key === 'Enter' && handleSearch()} // not needed ad using debounce, kept for future need
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                 />
                 <button
